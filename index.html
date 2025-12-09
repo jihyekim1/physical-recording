@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="ko" class="h-full">
+ <head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>학생 학습 기록지</title>
+  <script src="/_sdk/element_sdk.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    body {
+      box-sizing: border-box;
+    }
+  </style>
+  <style>@view-transition { navigation: auto; }</style>
+  <script src="/_sdk/data_sdk.js" type="text/javascript"></script>
+ </head>
+ <body class="h-full">
+  <div id="app" class="w-full h-full overflow-auto"></div>
+  <script>
+    // 여기에 구글 앱스 스크립트 URL을 넣으세요
+    const GOOGLE_APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxRNSqiGXTliIazg3cQdlGrbghx7wGI0X_HfTnfxF6n0RNn06t_KjTfliGRwT3fhO2t/exec";
+    
+    const defaultConfig = {
+      form_title: "학생 학습 기록지",
+      submit_button_text: "기록 제출하기",
+      background_color: "#f0f9ff",
+      card_color: "#ffffff",
+      text_color: "#1e293b",
+      primary_button_color: "#3b82f6",
+      secondary_button_color: "#64748b"
+    };
+
+    let config = { ...defaultConfig };
+
+    const activities = [
+      "앞구르기",
+      "뒷구르기",
+      "뜀틀 넘기",
+      "평균대 걷기"
+    ];
+
+    let currentStep = 1;
+    let studentInfo = {};
+
+    async function onConfigChange(newConfig) {
+      config = { ...config, ...newConfig };
+      
+      const app = document.getElementById('app');
+      app.style.background = config.background_color || defaultConfig.background_color;
+      
+      const card = document.getElementById('form-card');
+      if (card) {
+        card.style.background = config.card_color || defaultConfig.card_color;
+      }
+      
+      const title = document.getElementById('form-title');
+      if (title) {
+        title.textContent = config.form_title || defaultConfig.form_title;
+        title.style.color = config.text_color || defaultConfig.text_color;
+      }
+      
+      const labels = document.querySelectorAll('label');
+      labels.forEach(label => {
+        label.style.color = config.text_color || defaultConfig.text_color;
+      });
+      
+      const submitBtn = document.getElementById('submit-btn');
+      if (submitBtn) {
+        submitBtn.textContent = config.submit_button_text || defaultConfig.submit_button_text;
+        submitBtn.style.background = config.primary_button_color || defaultConfig.primary_button_color;
+      }
+
+      const startBtn = document.getElementById('start-btn');
+      if (startBtn) {
+        startBtn.style.background = config.primary_button_color || defaultConfig.primary_button_color;
+      }
+      
+      const selectElements = document.querySelectorAll('select');
+      selectElements.forEach(select => {
+        select.style.borderColor = config.secondary_button_color || defaultConfig.secondary_button_color;
+      });
+    }
+
+    function renderApp() {
+      if (currentStep === 1) {
+        renderStep1();
+      } else {
+        renderStep2();
+      }
+    }
+
+    function renderStep1() {
+      const app = document.getElementById('app');
+      
+      app.innerHTML = `
+        <div class="min-h-full flex items-center justify-center p-6">
+          <div id="form-card" class="w-full max-w-2xl rounded-2xl shadow-lg p-8">
+            <h1 id="form-title" class="text-3xl font-bold text-center mb-8">
+              ${config.form_title || defaultConfig.form_title}
+            </h1>
+            
+            <form id="info-form" class="space-y-6">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="grade" class="block text-sm font-semibold mb-2">학년</label>
+                  <input 
+                    type="number" 
+                    id="grade" 
+                    name="grade"
+                    min="1" 
+                    max="6" 
+                    required
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="예: 3"
+                  >
+                </div>
+                
+                <div>
+                  <label for="class" class="block text-sm font-semibold mb-2">반</label>
+                  <input 
+                    type="number" 
+                    id="class" 
+                    name="class"
+                    min="1" 
+                    max="20" 
+                    required
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="예: 2"
+                  >
+                </div>
+              </div>
+              
+              <div>
+                <label for="student-name" class="block text-sm font-semibold mb-2">학생 이름</label>
+                <input 
+                  type="text" 
+                  id="student-name" 
+                  name="student-name"
+                  required
+                  class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                  placeholder="이름을 입력하세요"
+                >
+              </div>
+              
+              <div>
+                <label for="activity" class="block text-sm font-semibold mb-2">학습 활동</label>
+                <select 
+                  id="activity" 
+                  name="activity"
+                  required
+                  class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-400 bg-white"
+                >
+                  <option value="">활동을 선택하세요</option>
+                  ${activities.map(activity => `<option value="${activity}">${activity}</option>`).join('')}
+                </select>
+              </div>
+              
+              <button 
+                type="submit" 
+                id="start-btn"
+                class="w-full py-4 rounded-lg text-white font-bold text-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+              >
+                기록 시작하기
+              </button>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      const form = document.getElementById('info-form');
+      form.addEventListener('submit', handleStep1Submit);
+      
+      onConfigChange(config);
+    }
+
+    function renderStep2() {
+      const app = document.getElementById('app');
+      
+      app.innerHTML = `
+        <div class="min-h-full flex items-center justify-center p-6">
+          <div id="form-card" class="w-full max-w-2xl rounded-2xl shadow-lg p-8">
+            <div class="mb-6 p-4 rounded-lg" style="background: ${config.card_color}; border: 2px solid ${config.secondary_button_color}">
+              <p class="text-center font-semibold">
+                ${studentInfo.grade}학년 ${studentInfo.class}반 ${studentInfo.studentName} - ${studentInfo.activity}
+              </p>
+            </div>
+            
+            <h2 class="text-2xl font-bold text-center mb-8" style="color: ${config.text_color}">
+              활동 기록하기
+            </h2>
+            
+            <form id="record-form" class="space-y-6">
+              <div class="grid grid-cols-2 gap-4">
+                <div>
+                  <label for="score" class="block text-sm font-semibold mb-2">점수</label>
+                  <input 
+                    type="number" 
+                    id="score" 
+                    name="score"
+                    min="0" 
+                    max="100" 
+                    required
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="0-100점"
+                  >
+                </div>
+                
+                <div>
+                  <label for="duration" class="block text-sm font-semibold mb-2">소요 시간 (분)</label>
+                  <input 
+                    type="number" 
+                    id="duration" 
+                    name="duration"
+                    min="1" 
+                    required
+                    class="w-full px-4 py-3 rounded-lg border-2 focus:outline-none focus:ring-2 focus:ring-blue-400"
+                    placeholder="예: 30"
+                  >
+                </div>
+              </div>
+              
+              <div id="message-container" class="hidden p-4 rounded-lg text-center font-semibold"></div>
+              
+              <div class="flex gap-3">
+                <button 
+                  type="button" 
+                  id="back-btn"
+                  class="flex-1 py-4 rounded-lg text-white font-bold text-lg shadow-md hover:shadow-lg transition-all duration-200"
+                  style="background: ${config.secondary_button_color}"
+                >
+                  뒤로 가기
+                </button>
+                <button 
+                  type="submit" 
+                  id="submit-btn"
+                  class="flex-1 py-4 rounded-lg text-white font-bold text-lg shadow-md hover:shadow-lg transition-all duration-200 transform hover:scale-105"
+                >
+                  ${config.submit_button_text || defaultConfig.submit_button_text}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+      
+      const form = document.getElementById('record-form');
+      form.addEventListener('submit', handleSubmit);
+      
+      const backBtn = document.getElementById('back-btn');
+      backBtn.addEventListener('click', () => {
+        currentStep = 1;
+        renderApp();
+      });
+      
+      onConfigChange(config);
+    }
+
+    function handleStep1Submit(e) {
+      e.preventDefault();
+      
+      studentInfo = {
+        grade: document.getElementById('grade').value,
+        class: document.getElementById('class').value,
+        studentName: document.getElementById('student-name').value,
+        activity: document.getElementById('activity').value
+      };
+      
+      currentStep = 2;
+      renderApp();
+    }
+
+    async function handleSubmit(e) {
+      e.preventDefault();
+      
+      const submitBtn = document.getElementById('submit-btn');
+      const messageContainer = document.getElementById('message-container');
+      const form = document.getElementById('record-form');
+      
+      submitBtn.disabled = true;
+      submitBtn.textContent = '전송 중...';
+      submitBtn.style.opacity = '0.6';
+      
+      const now = new Date();
+      const year = now.getFullYear();
+      const month = String(now.getMonth() + 1).padStart(2, '0');
+      const day = String(now.getDate()).padStart(2, '0');
+      const hours = String(now.getHours()).padStart(2, '0');
+      const minutes = String(now.getMinutes()).padStart(2, '0');
+      const seconds = String(now.getSeconds()).padStart(2, '0');
+      
+      const recordData = {
+        학생ID: `${studentInfo.grade}${studentInfo.class}${studentInfo.studentName}`,
+        학습활동: studentInfo.activity,
+        점수: document.getElementById('score').value,
+        소요시간: document.getElementById('duration').value,
+        timestamp: `${year}-${month}-${day} ${hours}:${minutes}:${seconds}`
+      };
+      
+      // 콘솔에 기록 출력
+      console.log('학습 기록:', recordData);
+      
+      // 구글 앱스 스크립트로 데이터 전송
+      if (GOOGLE_APPS_SCRIPT_URL && GOOGLE_APPS_SCRIPT_URL !== "여기에_URL_입력") {
+        try {
+          const response = await fetch(GOOGLE_APPS_SCRIPT_URL, {
+            method: 'POST',
+            mode: 'no-cors',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(recordData)
+          });
+          
+          // no-cors 모드에서는 응답을 확인할 수 없으므로 성공으로 간주
+          messageContainer.className = 'p-4 rounded-lg text-center font-semibold bg-green-100 text-green-800';
+          messageContainer.textContent = '✅ 학습 기록이 전송되었습니다!';
+        } catch (error) {
+          console.error('전송 오류:', error);
+          messageContainer.className = 'p-4 rounded-lg text-center font-semibold bg-yellow-100 text-yellow-800';
+          messageContainer.textContent = '⚠️ 기록이 저장되었으나 전송 확인 불가';
+        }
+      } else {
+        // URL이 설정되지 않은 경우
+        messageContainer.className = 'p-4 rounded-lg text-center font-semibold bg-green-100 text-green-800';
+        messageContainer.textContent = '✅ 학습 기록이 저장되었습니다!';
+      }
+      
+      messageContainer.classList.remove('hidden');
+      
+      // 폼 리셋 및 첫 화면으로
+      setTimeout(() => {
+        currentStep = 1;
+        renderApp();
+      }, 2000);
+    }
+
+    if (window.elementSdk) {
+      window.elementSdk.init({
+        defaultConfig,
+        onConfigChange,
+        mapToCapabilities: (config) => ({
+          recolorables: [
+            {
+              get: () => config.background_color || defaultConfig.background_color,
+              set: (value) => {
+                config.background_color = value;
+                window.elementSdk.setConfig({ background_color: value });
+              }
+            },
+            {
+              get: () => config.card_color || defaultConfig.card_color,
+              set: (value) => {
+                config.card_color = value;
+                window.elementSdk.setConfig({ card_color: value });
+              }
+            },
+            {
+              get: () => config.text_color || defaultConfig.text_color,
+              set: (value) => {
+                config.text_color = value;
+                window.elementSdk.setConfig({ text_color: value });
+              }
+            },
+            {
+              get: () => config.primary_button_color || defaultConfig.primary_button_color,
+              set: (value) => {
+                config.primary_button_color = value;
+                window.elementSdk.setConfig({ primary_button_color: value });
+              }
+            },
+            {
+              get: () => config.secondary_button_color || defaultConfig.secondary_button_color,
+              set: (value) => {
+                config.secondary_button_color = value;
+                window.elementSdk.setConfig({ secondary_button_color: value });
+              }
+            }
+          ],
+          borderables: [],
+          fontEditable: undefined,
+          fontSizeable: undefined
+        }),
+        mapToEditPanelValues: (config) => new Map([
+          ["form_title", config.form_title || defaultConfig.form_title],
+          ["submit_button_text", config.submit_button_text || defaultConfig.submit_button_text]
+        ])
+      });
+    }
+
+    renderApp();
+  </script>
+ <script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'9ab18593f649ea8d',t:'MTc2NTI1MjA1My4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
